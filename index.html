@@ -244,7 +244,7 @@
   const diveAgainBtn = document.getElementById('diveAgainBtn');
   const ytFrame = document.getElementById('ytFrame');
   const VIDEO_ID = 'TBxXCyeN09E';
-  const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?playsinline=1&rel=0`;
+  const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?playsinline=1&rel=0&enablejsapi=1`;
 
   let running = false;
   let triggered = false;
@@ -343,10 +343,10 @@
   function triggerDetected(){
     triggered = true;
     setStatus('Scuba detected!', 'go');
-    setTimeout(() => {
-      ytFrame.src = EMBED_URL;
-      overlay.classList.add('show');
-    }, 350);
+    overlay.classList.add('show');
+    try {
+      ytFrame.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    } catch(e){}
   }
 
   function resetDetection(){
@@ -354,7 +354,9 @@
     swingEvents = [];
     lastDir = null;
     prevX = null;
-    ytFrame.src = '';
+    try {
+      ytFrame.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    } catch(e){}
     overlay.classList.remove('show');
     setStatus('Watching for the wave');
   }
@@ -380,6 +382,7 @@
       startBtn.textContent = 'Watching…';
       startBtn.disabled = true;
       running = true;
+      ytFrame.src = EMBED_URL; // preload now so it's instant on trigger
 
       hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
