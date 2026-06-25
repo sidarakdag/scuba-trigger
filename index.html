@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Scuba Trigger">
-<meta name="theme-color" content="#101114">
+<meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon.png">
 <link rel="manifest" href="manifest.json">
@@ -22,8 +22,8 @@
   body{
     margin:0;
     min-height:100vh;
-    background:#101114;
-    color:#f2f2f2;
+    background:#000;
+    color:#fff;
     font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     display:flex;
     flex-direction:column;
@@ -34,28 +34,20 @@
   }
 
   h1{
-    font-size:20px;
-    font-weight:600;
-    margin:0 0 6px;
-  }
-
-  p.sub{
-    font-size:13px;
-    color:#9a9a9a;
-    text-align:center;
-    max-width:280px;
-    margin:0 0 22px;
-    line-height:1.5;
+    font-size:16px;
+    font-weight:500;
+    margin:0 0 20px;
+    color:#fff;
   }
 
   .cam-box{
     position:relative;
     width:min(62vw,220px);
     height:min(62vw,220px);
-    border-radius:14px;
+    border-radius:10px;
     overflow:hidden;
     background:#000;
-    border:1px solid #2a2b2f;
+    border:1px solid #2a2a2a;
     margin-bottom:18px;
   }
 
@@ -74,25 +66,14 @@
     object-fit:cover;
   }
 
-  .placeholder{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:34px;
-    opacity:0.35;
-  }
-
   #statusLine{
     font-size:13px;
-    color:#b9b9b9;
+    color:#aaa;
     margin:0 0 18px;
     text-align:center;
     min-height:18px;
   }
-  #statusLine.warn{ color:#f2a33c; }
-  #statusLine.go{ color:#35d6c4; }
+  #statusLine.go{ color:#fff; }
 
   .controls{
     width:min(80vw,260px);
@@ -103,79 +84,74 @@
 
   button.primary{
     font-size:14px;
-    font-weight:600;
+    font-weight:500;
     padding:13px 0;
-    border-radius:9px;
-    border:none;
-    background:#35d6c4;
-    color:#0a1a18;
+    border-radius:6px;
+    border:1px solid #fff;
+    background:#000;
+    color:#fff;
     cursor:pointer;
   }
-  button.primary:disabled{ opacity:0.6; }
+  button.primary:disabled{ opacity:0.5; }
 
   .sense-row{
     display:flex;
     align-items:center;
     gap:10px;
     font-size:12px;
-    color:#9a9a9a;
+    color:#777;
   }
 
   input[type=range]{
     flex:1;
     -webkit-appearance:none;
-    height:3px;
-    background:#2a2b2f;
-    border-radius:3px;
+    height:2px;
+    background:#2a2a2a;
+    border-radius:2px;
     outline:none;
   }
   input[type=range]::-webkit-slider-thumb{
     -webkit-appearance:none;
-    width:16px;height:16px;
+    width:14px;height:14px;
     border-radius:50%;
-    background:#35d6c4;
+    background:#fff;
     cursor:pointer;
   }
   input[type=range]::-moz-range-thumb{
-    width:16px;height:16px;
+    width:14px;height:14px;
     border-radius:50%;
-    background:#35d6c4;
+    background:#fff;
     border:none;
     cursor:pointer;
   }
 
   .note{
     font-size:11px;
-    color:#777;
+    color:#555;
     text-align:center;
     line-height:1.5;
   }
-  .note.error{ color:#f2a33c; }
 
   .overlay{
     position:fixed;
     inset:0;
-    background:#101114;
+    background:#000;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    text-align:center;
     padding:32px;
     opacity:0;
     pointer-events:none;
-    transition:opacity .4s ease;
+    transition:opacity .3s ease;
   }
   .overlay.show{ opacity:1; pointer-events:auto; }
-  .overlay .emoji{ font-size:46px; margin-bottom:8px; }
-  .overlay h2{ font-size:20px; margin:0 0 6px; }
-  .overlay p{ font-size:13px; color:#9a9a9a; margin:0 0 22px; }
 
   .video-box{
     width:min(78vw,280px);
     aspect-ratio:9/16;
     background:#000;
-    border-radius:12px;
+    border-radius:8px;
     overflow:hidden;
     margin-bottom:18px;
   }
@@ -188,7 +164,7 @@
   button.ghost{
     background:none;
     border:none;
-    color:#9a9a9a;
+    color:#777;
     font-size:12px;
     text-decoration:underline;
     cursor:pointer;
@@ -198,10 +174,8 @@
 <body>
 
   <h1>Scuba Trigger</h1>
-  <p class="sub">Do the scuba wave in front of the camera to open the video.</p>
 
   <div class="cam-box">
-    <div class="placeholder" id="placeholderIcon">🤿</div>
     <video id="video" playsinline muted></video>
     <canvas id="overlayCanvas"></canvas>
   </div>
@@ -214,19 +188,16 @@
       <span>Sensitivity</span>
       <input type="range" id="senseSlider" min="3" max="18" value="9" step="1">
     </div>
-    <p class="note" id="noteText">Uses your front camera only — nothing is recorded or sent anywhere.</p>
+    <p class="note" id="noteText">Uses your camera only — nothing is recorded or sent anywhere.</p>
   </div>
 
 <div class="overlay" id="overlay">
-  <div class="emoji">🤿</div>
-  <h2>Surfaced.</h2>
-  <p>Scuba wave detected.</p>
   <div class="video-box">
-    <iframe id="ytFrame" src="" title="Video" frameborder="0"
+    <iframe id="ytFrame" src="" title="video" frameborder="0"
       allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
       allowfullscreen></iframe>
   </div>
-  <button class="ghost" id="diveAgainBtn">Dive again</button>
+  <button class="ghost" id="diveAgainBtn">Reset</button>
 </div>
 
 <script>
@@ -239,12 +210,11 @@
   const senseSlider = document.getElementById('senseSlider');
   const statusLine = document.getElementById('statusLine');
   const overlay = document.getElementById('overlay');
-  const placeholderIcon = document.getElementById('placeholderIcon');
   const noteText = document.getElementById('noteText');
   const diveAgainBtn = document.getElementById('diveAgainBtn');
   const ytFrame = document.getElementById('ytFrame');
   const VIDEO_ID = 'TBxXCyeN09E';
-  const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?playsinline=1&rel=0&enablejsapi=1`;
+  const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?playsinline=1&rel=0&modestbranding=1&enablejsapi=1`;
 
   let running = false;
   let triggered = false;
@@ -265,7 +235,7 @@
 
   function setStatus(text, mode){
     statusLine.textContent = text;
-    statusLine.classList.remove('warn','go');
+    statusLine.classList.remove('go');
     if (mode) statusLine.classList.add(mode);
   }
 
@@ -284,10 +254,10 @@
       handCount = results.multiHandLandmarks.length;
       results.multiHandLandmarks.forEach(lm => {
         if (window.drawConnectors && window.HAND_CONNECTIONS){
-          window.drawConnectors(ctx, lm, window.HAND_CONNECTIONS, {color:'rgba(53,214,196,0.85)', lineWidth:2});
+          window.drawConnectors(ctx, lm, window.HAND_CONNECTIONS, {color:'rgba(255,255,255,0.7)', lineWidth:2});
         }
         if (window.drawLandmarks){
-          window.drawLandmarks(ctx, lm, {color:'#f2a33c', radius:3, lineWidth:0});
+          window.drawLandmarks(ctx, lm, {color:'#ffffff', radius:3, lineWidth:0});
         }
       });
     }
@@ -332,7 +302,7 @@
     if (swingEvents.length === 0){
       setStatus('Hand seen — start waving');
     } else {
-      setStatus(`Swing ${swingEvents.length} of ${REQUIRED_SWINGS}`, 'warn');
+      setStatus(`Swing ${swingEvents.length} of ${REQUIRED_SWINGS}`);
     }
 
     if (swingEvents.length >= REQUIRED_SWINGS){
@@ -342,7 +312,7 @@
 
   function triggerDetected(){
     triggered = true;
-    setStatus('Scuba detected!', 'go');
+    setStatus('Detected', 'go');
     overlay.classList.add('show');
     try {
       ytFrame.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
@@ -378,11 +348,10 @@
       overlayCanvas.width = video.videoWidth || 480;
       overlayCanvas.height = video.videoHeight || 480;
 
-      placeholderIcon.style.display = 'none';
       startBtn.textContent = 'Watching…';
       startBtn.disabled = true;
       running = true;
-      ytFrame.src = EMBED_URL; // preload now so it's instant on trigger
+      ytFrame.src = EMBED_URL;
 
       hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
@@ -398,9 +367,8 @@
       setStatus('Watching for the wave');
       loop();
     } catch (err) {
-      setStatus('Camera unavailable', 'warn');
+      setStatus('Camera unavailable');
       noteText.textContent = "Camera access failed. Open this page directly in Safari and allow camera access.";
-      noteText.classList.add('error');
     }
   }
 
