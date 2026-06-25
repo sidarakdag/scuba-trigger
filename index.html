@@ -171,16 +171,18 @@
   .overlay h2{ font-size:20px; margin:0 0 6px; }
   .overlay p{ font-size:13px; color:#9a9a9a; margin:0 0 22px; }
 
-  a.watch-btn{
-    display:inline-block;
-    font-size:14px;
-    font-weight:600;
-    padding:13px 26px;
-    border-radius:9px;
-    background:#35d6c4;
-    color:#0a1a18;
-    text-decoration:none;
-    margin-bottom:12px;
+  .video-box{
+    width:min(78vw,280px);
+    aspect-ratio:9/16;
+    background:#000;
+    border-radius:12px;
+    overflow:hidden;
+    margin-bottom:18px;
+  }
+  .video-box iframe{
+    width:100%;
+    height:100%;
+    border:0;
   }
 
   button.ghost{
@@ -218,9 +220,12 @@
 <div class="overlay" id="overlay">
   <div class="emoji">🤿</div>
   <h2>Surfaced.</h2>
-  <p>Scuba wave detected — here's your video.</p>
-  <a class="watch-btn" id="watchBtn" href="https://youtube.com/shorts/TBxXCyeN09E?si=TwqM9vE_nL_PCETR" target="_blank" rel="noopener">Open Video</a>
-  <br>
+  <p>Scuba wave detected.</p>
+  <div class="video-box">
+    <iframe id="ytFrame" src="" title="Video" frameborder="0"
+      allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+      allowfullscreen></iframe>
+  </div>
   <button class="ghost" id="diveAgainBtn">Dive again</button>
 </div>
 
@@ -237,8 +242,9 @@
   const placeholderIcon = document.getElementById('placeholderIcon');
   const noteText = document.getElementById('noteText');
   const diveAgainBtn = document.getElementById('diveAgainBtn');
-  const watchBtn = document.getElementById('watchBtn');
-  const VIDEO_URL = watchBtn.href;
+  const ytFrame = document.getElementById('ytFrame');
+  const VIDEO_ID = 'TBxXCyeN09E';
+  const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?playsinline=1&rel=0`;
 
   let running = false;
   let triggered = false;
@@ -338,8 +344,8 @@
     triggered = true;
     setStatus('Scuba detected!', 'go');
     setTimeout(() => {
+      ytFrame.src = EMBED_URL;
       overlay.classList.add('show');
-      try { window.open(VIDEO_URL, '_blank', 'noopener'); } catch(e){}
     }, 350);
   }
 
@@ -348,6 +354,7 @@
     swingEvents = [];
     lastDir = null;
     prevX = null;
+    ytFrame.src = '';
     overlay.classList.remove('show');
     setStatus('Watching for the wave');
   }
