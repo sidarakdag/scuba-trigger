@@ -18,6 +18,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Real hand-tracking (MediaPipe Hands) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+
 <style>
   :root{
     --abyss:#060a10;
@@ -50,7 +55,7 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    padding:32px 20px 48px;
+    padding:28px 20px 48px;
   }
 
   .eyebrow{
@@ -74,19 +79,19 @@
   .sub{
     font-size:12px;
     color:var(--foam-dim);
-    margin:0 0 28px;
+    margin:0 0 22px;
     text-align:center;
-    max-width:300px;
+    max-width:320px;
     line-height:1.6;
   }
 
   /* ---------- porthole ---------- */
   .porthole-frame{
     position:relative;
-    width:min(72vw,300px);
-    height:min(72vw,300px);
+    width:min(90vw,420px);
+    height:min(90vw,420px);
     border-radius:50%;
-    margin-bottom:26px;
+    margin-bottom:22px;
   }
 
   .porthole-frame::before{
@@ -103,7 +108,7 @@
 
   .porthole-inner{
     position:absolute;
-    inset:14px;
+    inset:16px;
     border-radius:50%;
     overflow:hidden;
     background:#000;
@@ -115,14 +120,18 @@
   video{
     position:absolute;
     inset:0;
+    width:1px;
+    height:1px;
+    opacity:0;
+  }
+
+  #overlayCanvas{
+    position:absolute;
+    inset:0;
     width:100%;
     height:100%;
     object-fit:cover;
-    transform:scaleX(-1);
-    opacity:0;
-    transition:opacity .6s ease;
   }
-  video.live{ opacity:1; }
 
   .placeholder-icon{
     position:absolute;
@@ -130,8 +139,9 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:40px;
+    font-size:46px;
     opacity:0.35;
+    z-index:2;
   }
 
   .scanlines{
@@ -146,6 +156,7 @@
     );
     pointer-events:none;
     mix-blend-mode:overlay;
+    z-index:3;
   }
 
   .sweep{
@@ -156,13 +167,14 @@
     pointer-events:none;
     animation:spin 3.2s linear infinite;
     transition:opacity .4s ease;
+    z-index:3;
   }
   .sweep.active{ opacity:1; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
   .rim-rivets span{
     position:absolute;
-    width:6px;height:6px;
+    width:7px;height:7px;
     border-radius:50%;
     background:#0a1316;
     box-shadow:0 0 0 1px rgba(53,214,196,0.25), 0 1px 1px rgba(0,0,0,0.6);
@@ -174,7 +186,7 @@
 
   /* ---------- HUD ---------- */
   .hud{
-    width:min(86vw,320px);
+    width:min(90vw,360px);
     background:var(--panel);
     border:1px solid var(--hull);
     border-radius:10px;
@@ -262,7 +274,7 @@
 
   /* ---------- controls ---------- */
   .controls{
-    width:min(86vw,320px);
+    width:min(90vw,360px);
     display:flex;
     flex-direction:column;
     gap:14px;
@@ -408,13 +420,14 @@
 <div class="stage">
   <p class="eyebrow">Dive Computer · Gesture Trigger</p>
   <h1>Scuba Trigger</h1>
-  <p class="sub">Point your camera at yourself and do the scuba wave — nose pinched, free hand waving — to surface the video.</p>
+  <p class="sub">Do the scuba wave — nose pinched, free hand waving — in front of the camera. It only fires when it actually sees a hand, so shakes and bumps won't trigger it.</p>
 
   <div class="porthole-frame">
     <div class="rim-rivets"><span></span><span></span><span></span><span></span></div>
     <div class="porthole-inner">
       <div class="placeholder-icon" id="placeholderIcon">🤿</div>
       <video id="video" playsinline muted></video>
+      <canvas id="overlayCanvas"></canvas>
       <div class="scanlines"></div>
       <div class="sweep" id="sweep"></div>
     </div>
@@ -423,11 +436,11 @@
   <div class="hud">
     <div class="meters">
       <div class="meter">
-        <span class="meter-label">PORT</span>
+        <span class="meter-label">SWING LEFT</span>
         <div class="meter-bars" id="leftBars"></div>
       </div>
       <div class="meter">
-        <span class="meter-label">STARBOARD</span>
+        <span class="meter-label">SWING RIGHT</span>
         <div class="meter-bars" id="rightBars"></div>
       </div>
     </div>
@@ -450,7 +463,7 @@
       <input type="range" id="senseSlider" min="3" max="18" value="9" step="1">
     </div>
 
-    <p class="note" id="noteText">Uses your front camera only — nothing is recorded or sent anywhere, it just watches for the motion pattern.</p>
+    <p class="note" id="noteText">Uses your front camera only — nothing is recorded or sent anywhere, it just watches for a hand and tracks how it moves.</p>
   </div>
 </div>
 
@@ -463,14 +476,11 @@
   <button class="ghost" id="diveAgainBtn">Dive again</button>
 </div>
 
-<canvas id="canvas" width="80" height="60" style="display:none;"></canvas>
-
 <script>
 (function(){
   const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const W = canvas.width, H = canvas.height;
+  const overlayCanvas = document.getElementById('overlayCanvas');
+  const ctx = overlayCanvas.getContext('2d');
 
   const startBtn = document.getElementById('startBtn');
   const senseSlider = document.getElementById('senseSlider');
@@ -495,17 +505,17 @@
   const leftBars = leftBarsEl.querySelectorAll('i');
   const rightBars = rightBarsEl.querySelectorAll('i');
 
-  let prevFrame = null;
   let running = false;
-  let lastTime = 0;
-  const FRAME_INTERVAL = 90; // ms, ~11fps
+  let triggered = false;
+  let prevX = null;
+  let lastDir = null;
+  let swingEvents = [];
+  let lastHandTime = 0;
+
   const WINDOW_MS = 2200;
   const REQUIRED_SWINGS = 3;
-  const PRESENCE_MIN = 1.6;
-
-  let swingEvents = [];
-  let lastDominant = null;
-  let triggered = false;
+  const HAND_GRACE_MS = 900;
+  const DEAD = 0.012;
 
   function senseLabel(v){
     if (v <= 6) return 'Low';
@@ -513,20 +523,21 @@
     return 'High';
   }
   senseSlider.addEventListener('input', () => {
-    senseVal.textContent = senseLabel(19 - Number(senseSlider.value));
+    senseVal.textContent = senseLabel(Number(senseSlider.value));
   });
-  senseVal.textContent = senseLabel(19 - Number(senseSlider.value));
+  senseVal.textContent = senseLabel(Number(senseSlider.value));
 
   function getThreshold(){
-    // slider stores "noise floor", higher slider value = more sensitive (lower threshold)
-    return 21 - Number(senseSlider.value);
+    // higher slider = more sensitive = lower movement threshold needed
+    const v = Number(senseSlider.value); // 3..18
+    return 0.13 - ((v - 3) / 15) * 0.10; // 0.13 down to 0.03
   }
 
   function setBars(bars, value){
     const lit = Math.min(BAR_COUNT, Math.round((value/40) * BAR_COUNT));
     bars.forEach((b,i) => {
       b.classList.toggle('lit', i < lit);
-      b.classList.toggle('hot', i < lit && value > getThreshold()*1.6);
+      b.classList.toggle('hot', i < lit && value > 28);
     });
   }
 
@@ -540,89 +551,81 @@
     swingDots.forEach((d,i) => d.classList.toggle('filled', i < n));
   }
 
-  async function startCamera(){
-    setStatus('REQUESTING CAMERA…');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } },
-        audio: false
-      });
-      video.srcObject = stream;
-      await video.play();
-      video.classList.add('live');
-      placeholderIcon.style.display = 'none';
-      sweep.classList.add('active');
-      startBtn.textContent = 'Watching…';
-      startBtn.disabled = true;
-      noteText.textContent = 'Do the scuba wave — pinch your nose, wave your free hand back and forth in front of your face.';
-      running = true;
-      requestAnimationFrame(loop);
-      setStatus('WATCHING FOR THE WAVE');
-    } catch (err) {
-      setStatus('CAMERA UNAVAILABLE', 'warn');
-      noteText.textContent = 'Camera access failed. If you\'re viewing this inside a preview, open the file directly in your phone\'s browser and allow camera access there.';
-      noteText.classList.add('error');
-    }
-  }
+  let hands;
 
-  function loop(ts){
-    if (!running) return;
-    if (ts - lastTime >= FRAME_INTERVAL){
-      lastTime = ts;
-      ctx.drawImage(video, 0, 0, W, H);
-      const frame = ctx.getImageData(0,0,W,H).data;
-      if (prevFrame){
-        let leftSum = 0, rightSum = 0;
-        const half = W/2;
-        for (let y=0; y<H; y++){
-          for (let x=0; x<W; x++){
-            const idx = (y*W + x)*4;
-            const lum = (frame[idx] + frame[idx+1] + frame[idx+2]) / 3;
-            const plum = (prevFrame[idx] + prevFrame[idx+1] + prevFrame[idx+2]) / 3;
-            const d = Math.abs(lum - plum);
-            if (x < half) leftSum += d; else rightSum += d;
-          }
+  function onResults(results){
+    const cw = overlayCanvas.width, ch = overlayCanvas.height;
+    ctx.save();
+    ctx.clearRect(0,0,cw,ch);
+    ctx.translate(cw,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(results.image, 0, 0, cw, ch);
+
+    let handCount = 0;
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length){
+      handCount = results.multiHandLandmarks.length;
+      results.multiHandLandmarks.forEach(lm => {
+        if (window.drawConnectors && window.HAND_CONNECTIONS){
+          window.drawConnectors(ctx, lm, window.HAND_CONNECTIONS, {color:'rgba(53,214,196,0.85)', lineWidth:3});
         }
-        const leftAvg = leftSum / (W*H/2);
-        const rightAvg = rightSum / (W*H/2);
-        processMotion(leftAvg, rightAvg);
-      }
-      prevFrame = frame;
+        if (window.drawLandmarks){
+          window.drawLandmarks(ctx, lm, {color:'#f2a33c', radius:4, lineWidth:0});
+        }
+      });
     }
-    requestAnimationFrame(loop);
+    ctx.restore();
+
+    const now = performance.now();
+    let dx = 0;
+    if (handCount > 0){
+      lastHandTime = now;
+      const x = results.multiHandLandmarks[0][0].x;
+      if (prevX !== null) dx = x - prevX;
+      prevX = x;
+    } else {
+      prevX = null;
+    }
+
+    processMotion(handCount, dx, now);
   }
 
-  function processMotion(leftAvg, rightAvg){
-    setBars(leftBars, leftAvg);
-    setBars(rightBars, rightAvg);
-
+  function processMotion(handCount, dx, now){
     const threshold = getThreshold();
-    const total = leftAvg + rightAvg;
-    const diff = Math.abs(leftAvg - rightAvg);
-    const now = performance.now();
+    const mag = Math.min(40, Math.abs(dx) * 600);
+
+    if (dx < -DEAD){
+      setBars(leftBars, mag); setBars(rightBars, 0);
+    } else if (dx > DEAD){
+      setBars(rightBars, mag); setBars(leftBars, 0);
+    } else {
+      setBars(leftBars, 0); setBars(rightBars, 0);
+    }
+
+    if (now - lastHandTime > HAND_GRACE_MS){
+      swingEvents = [];
+      lastDir = null;
+      setSwingDots(0);
+      if (!triggered) setStatus('STANDBY — SHOW YOUR HAND', null);
+      return;
+    }
 
     let dominant = null;
-    if (Math.max(leftAvg, rightAvg) > threshold && diff > threshold * 0.4){
-      dominant = leftAvg > rightAvg ? 'L' : 'R';
+    if (Math.abs(dx) > threshold){
+      dominant = dx > 0 ? 'R' : 'L';
     }
-
-    if (dominant && dominant !== lastDominant){
+    if (dominant && dominant !== lastDir){
       swingEvents.push(now);
-      lastDominant = dominant;
+      lastDir = dominant;
     }
-
     swingEvents = swingEvents.filter(t => now - t < WINDOW_MS);
-    const count = Math.min(REQUIRED_SWINGS, swingEvents.length);
-    setSwingDots(count);
+    setSwingDots(Math.min(REQUIRED_SWINGS, swingEvents.length));
 
     if (triggered) return;
 
-    if (total < PRESENCE_MIN){
-      setStatus('STANDBY — STEP INTO FRAME');
-    } else if (swingEvents.length < REQUIRED_SWINGS){
-      setStatus(swingEvents.length === 0
-        ? 'WATCHING FOR THE WAVE'
-        : `TRACKING SWING (${swingEvents.length}/${REQUIRED_SWINGS})`, 'warn');
+    if (swingEvents.length === 0){
+      setStatus('HAND SEEN — WATCHING FOR THE WAVE', null);
+    } else {
+      setStatus(`TRACKING SWING (${swingEvents.length}/${REQUIRED_SWINGS})`, 'warn');
     }
 
     if (swingEvents.length >= REQUIRED_SWINGS){
@@ -642,10 +645,63 @@
   function resetDetection(){
     triggered = false;
     swingEvents = [];
-    lastDominant = null;
+    lastDir = null;
+    prevX = null;
     setSwingDots(0);
     overlay.classList.remove('show');
     setStatus('WATCHING FOR THE WAVE');
+  }
+
+  async function startCamera(){
+    setStatus('REQUESTING CAMERA…');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+
+      await new Promise(resolve => {
+        if (video.readyState >= 2) return resolve();
+        video.onloadedmetadata = () => resolve();
+      });
+      overlayCanvas.width = video.videoWidth || 480;
+      overlayCanvas.height = video.videoHeight || 480;
+
+      placeholderIcon.style.display = 'none';
+      sweep.classList.add('active');
+      startBtn.textContent = 'Watching…';
+      startBtn.disabled = true;
+      noteText.textContent = 'Do the scuba wave — pinch your nose, wave your free hand back and forth in front of your face.';
+      running = true;
+
+      hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.5
+      });
+      hands.onResults(onResults);
+
+      setStatus('WATCHING FOR THE WAVE');
+      loop();
+    } catch (err) {
+      setStatus('CAMERA UNAVAILABLE', 'warn');
+      noteText.textContent = "Camera access failed. If you're viewing this inside a preview, open the file directly in your phone's browser and allow camera access there.";
+      noteText.classList.add('error');
+    }
+  }
+
+  async function loop(){
+    if (!running) return;
+    if (video.readyState >= 2 && hands){
+      await hands.send({ image: video });
+    }
+    requestAnimationFrame(loop);
   }
 
   startBtn.addEventListener('click', startCamera);
