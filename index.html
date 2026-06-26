@@ -228,6 +228,12 @@
   const HAND_GRACE_MS = 900;
   const DEAD = 0.012;
 
+  function post(func, args){
+    try {
+      ytFrame.contentWindow.postMessage(JSON.stringify({event:'command', func, args: args || ''}), '*');
+    } catch(e){}
+  }
+
   function getThreshold(){
     const v = Number(senseSlider.value);
     return 0.13 - ((v - 3) / 15) * 0.10;
@@ -314,9 +320,8 @@
     triggered = true;
     setStatus('Detected', 'go');
     overlay.classList.add('show');
-    try {
-      ytFrame.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-    } catch(e){}
+    post('unMute');
+    post('playVideo');
   }
 
   function resetDetection(){
@@ -324,9 +329,9 @@
     swingEvents = [];
     lastDir = null;
     prevX = null;
-    try {
-      ytFrame.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-    } catch(e){}
+    post('pauseVideo');
+    post('seekTo', [0, true]);
+    post('mute');
     overlay.classList.remove('show');
     setStatus('Watching for the wave');
   }
@@ -352,6 +357,16 @@
       startBtn.disabled = true;
       running = true;
       ytFrame.src = EMBED_URL;
+      ytFrame.onload = () => {
+        setTimeout(() => {
+          post('mute');
+          post('playVideo');
+          setTimeout(() => {
+            post('pauseVideo');
+            post('seekTo', [0, true]);
+          }, 600);
+        }, 300);
+      };
 
       hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
